@@ -1,0 +1,167 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#1769aa">
+<title>فاتورة وكالة أبو محمود</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:12px;background:#eef4fa;color:#172b43;font-family:Arial,sans-serif}
+header{background:#1769aa;color:white;text-align:center;padding:20px 8px;border-radius:12px}
+h2{margin:5px 0;font-size:23px}
+header p{margin:8px 0}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+input,textarea{font:inherit;min-width:0;width:100%;padding:9px;border:1px solid #bdccda;border-radius:6px;background:white;color:#111}
+label{display:block;font-size:13px;margin-bottom:4px}
+table{width:100%;border-collapse:collapse;background:white;font-size:12px}
+th,td{border:1px solid #8faac3;padding:4px;text-align:center}
+th{background:#1769aa;color:white}
+td input{padding:7px 2px;border:0;border-radius:0;text-align:center;font-size:12px}
+.product{min-width:90px}
+.num{width:48px}
+.price{width:65px}
+.total{font-weight:bold;white-space:nowrap}
+.actions{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+button{background:#1769aa;color:white;border:0;border-radius:7px;padding:11px 13px;font-size:14px}
+.summary{background:white;padding:12px;border:1px solid #bdccda;border-radius:8px}
+.sumline{display:flex;justify-content:space-between;gap:10px;margin:8px 0;font-weight:bold}
+footer{text-align:center;margin-top:12px;color:#1769aa}
+@media print{
+body{background:white;padding:0}
+.actions{display:none}
+input,textarea{border:0;padding:3px;background:transparent}
+header{border-radius:0}
+table{font-size:10px}
+th,td{padding:3px}
+}
+</style>
+</head>
+<body>
+<header>
+<h2>وكالة أبو محمود</h2>
+<p>لقطع الدراجات النارية</p>
+<p>العنوان: العيون</p>
+</header>
+
+<div class="info">
+<div><label>رقم الفاتورة</label><input id="inv" type="text" inputmode="numeric"></div>
+<div><label>التاريخ</label><input id="date" type="date"></div>
+<div><label>اسم الزبون</label><input id="customer"></div>
+<div><label>رقم الهاتف</label><input type="tel"></div>
+</div>
+
+<table>
+<thead>
+<tr>
+<th>م</th>
+<th>الملاحظات</th>
+<th>السعر الإفرادي</th>
+<th>العدد</th>
+<th>نوع المنتج</th>
+<th>السعر الإجمالي</th>
+</tr>
+</thead>
+<tbody id="items"></tbody>
+</table>
+
+<div class="actions">
+<button onclick="addRow()">إضافة سطر</button>
+<button onclick="saveInvoice()">حفظ الفاتورة</button>
+<button onclick="loadInvoice()">استعادة المحفوظ</button>
+<button onclick="window.print()">طباعة الفاتورة</button>
+<button onclick="newInvoice()">فاتورة جديدة</button>
+</div>
+
+<div class="summary">
+<div class="sumline"><span>المجموع:</span><span id="grand">0</span></div>
+<label>الخصم</label>
+<input id="discount" type="number" min="0" value="0" oninput="calculate()">
+<div class="sumline"><span>الصافي المطلوب:</span><span id="net">0</span></div>
+<label>المبلغ المدفوع</label>
+<input id="paid" type="number" min="0" value="0" oninput="calculate()">
+<div class="sumline"><span>المبلغ المتبقي:</span><span id="remaining">0</span></div>
+<label>المبلغ كتابةً / ملاحظات</label>
+<textarea rows="2" id="notes"></textarea>
+<p>المجموع: ................................ فقط لا غير</p>
+</div>
+
+<footer>لسنا الوحيدين ولكن نسعى لنكون الأفضل</footer>
+
+<script>
+const body=document.getElementById('items');
+const fmt=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+function addRow(name='',price='',qty='',note=''){
+let r=body.insertRow();
+let i=body.rows.length;
+r.innerHTML=`<td>${i}</td>
+<td><input aria-label="الملاحظات" value="${note}"></td>
+<td><input class="price" type="number" min="0" value="${price}" oninput="calculate()"></td>
+<td><input class="num" type="number" min="0" value="${qty}" oninput="calculate()"></td>
+<td><input class="product" value="${name}"></td>
+<td class="total">0</td>`;
+calculate();
+}
+function calculate(){
+let sum=0;
+[...body.rows].forEach(r=>{
+let p=Number(r.cells[2].querySelector('input').value)||0;
+let q=Number(r.cells[3].querySelector('input').value)||0;
+let t=p*q;sum+=t;r.cells[5].textContent=fmt(t);
+});
+let d=Number(document.getElementById('discount').value)||0;
+let paid=Number(document.getElementById('paid').value)||0;
+let net=Math.max(0,sum-d);
+document.getElementById('grand').textContent=fmt(sum);
+document.getElementById('net').textContent=fmt(net);
+document.getElementById('remaining').textContent=fmt(Math.max(0,net-paid));
+}
+function getData(){
+return {
+inv:document.getElementById('inv').value,
+date:document.getElementById('date').value,
+customer:document.getElementById('customer').value,
+discount:document.getElementById('discount').value,
+paid:document.getElementById('paid').value,
+notes:document.getElementById('notes').value,
+rows:[...body.rows].map(r=>[...r.querySelectorAll('input')].map(x=>x.value))
+};
+}
+function putData(d){
+['inv','date','customer','discount','paid','notes'].forEach(k=>{
+document.getElementById(k).value=d[k]??'';
+});
+body.innerHTML='';
+(d.rows||[]).forEach(a=>addRow(a[3],a[1],a[2],a[0]));
+calculate();
+}
+function saveInvoice(){
+try{
+localStorage.setItem('abuMahmoudInvoice',JSON.stringify(getData()));
+alert('تم حفظ الفاتورة على هذا الجهاز');
+}catch(e){alert('تعذر الحفظ على هذا المتصفح');}
+}
+function loadInvoice(){
+try{
+let d=localStorage.getItem('abuMahmoudInvoice');
+if(d){putData(JSON.parse(d));alert('تم استعادة الفاتورة');}
+else alert('لا توجد فاتورة محفوظة');
+}catch(e){alert('تعذرت استعادة الفاتورة');}
+}
+function newInvoice(){
+if(!confirm('هل تريد بدء فاتورة جديدة؟ احفظ الحالية أولاً.'))return;
+document.getElementById('inv').value='';
+document.getElementById('customer').value='';
+document.getElementById('discount').value=0;
+document.getElementById('paid').value=0;
+document.getElementById('notes').value='';
+body.innerHTML='';
+for(let i=0;i<20;i++)addRow();
+calculate();
+}
+document.getElementById('date').value=new Date().toLocaleDateString('en-CA');
+for(let i=0;i<20;i++)addRow();
+</script>
+</body>
+</html>
